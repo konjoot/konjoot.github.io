@@ -3,7 +3,7 @@
  */
 .site-header {
     border-top: 5px solid transparent;
-    border-bottom: 1px solid $grey-color-light;
+    border-bottom: 1px solid transparent;
     min-height: 56px;
 
     // Positioning context for the mobile navigation icon
@@ -106,13 +106,6 @@
     margin-bottom: $spacing-unit / 2;
 }
 
-.contact-list,
-.social-media-list {
-    list-style: none;
-    margin-left: 0;
-    float: right;
-}
-
 .footer-col-wrapper {
     font-size: 15px;
     color: $grey-color;
@@ -165,7 +158,6 @@
         width:         calc(100% - (#{$spacing-unit} / 2));
     }
 }
-
 
 
 /**
@@ -242,5 +234,44 @@
         @include media-query($on-laptop) {
             font-size: 18px;
         }
+    }
+}
+
+.sidebar-wrapper {
+    position: absolute;
+    right: -60px;
+    width: 40px;
+}
+.sidebar-content {
+    position: fixed;
+    width: 40px;
+    top: 4em;
+}
+
+.contact-list,
+.social-media-list {
+    position: absolute;
+    right: 0;
+    margin: 0;
+    padding: 0;
+    float: right;
+    text-align: right;
+    list-style: none;
+}
+
+@include media-query($on-laptop-2) {
+    .sidebar-wrapper {
+        position: relative;
+        width: auto;
+        right: auto;
+    }
+
+    .sidebar-content {
+        position: relative;
+        width: auto;
+    }
+
+    .social-media-list > li {
+        display: inline;
     }
 }

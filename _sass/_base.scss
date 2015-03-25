@@ -154,6 +154,7 @@ pre {
  * Wrapper
  */
 .wrapper {
+    position: relative;
     max-width: -webkit-calc(800px - (#{$spacing-unit} * 2));
     max-width:         calc(800px - (#{$spacing-unit} * 2));
     margin-right: auto;
@@ -193,9 +194,9 @@ pre {
 
     > svg {
         display: inline-block;
-        width: 64px;
-        height: 64px;
+        width: 36px;
+        height: 36px;
         vertical-align: middle;
-        margin: 8px;
+        margin: 5px;
     }
 }
