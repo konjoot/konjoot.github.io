@@ -9,7 +9,6 @@ dl, dd, ol, ul, figure {
 }
 
 
-
 /**
  * Basic styling
  */
@@ -165,6 +164,7 @@ pre {
     margin-left: auto;
     padding-right: $spacing-unit;
     padding-left: $spacing-unit;
+
     @extend %clearfix;
 
     @include media-query($on-laptop) {
@@ -175,6 +175,23 @@ pre {
     }
 }
 
+.border-container {
+    position: absolute;
+    top: 0;
+    &.left{ left: 0 }
+    &.right{ right: 0 }
+}
+
+.border {
+    position: fixed;
+    height: 80%;
+    width: 1px;
+    border: 0;
+    background-image: -webkit-linear-gradient(top, transparent, #46433A, transparent);
+    background-image: -moz-linear-gradient(top, transparent, #46433A, transparent);
+    background-image: -ms-linear-gradient(top, transparent, #46433A, transparent);
+    background-image: -o-linear-gradient(top, transparent, #46433A, transparent);
+}
 
 
 /**
