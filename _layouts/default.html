@@ -9,10 +9,11 @@
 
     <div class="page-content">
       <div class="wrapper">
+        {% include sidebar.html %}
         <div class="border-container left"><div class="border"></div></div>
         {{ content }}
         <div class="border-container right"><div class="border"></div></div>
-        {% include sidebar.html %}
+        {% include social_sidebar.html %}
       </div>
     </div>
 
