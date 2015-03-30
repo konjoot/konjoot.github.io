@@ -8,9 +8,15 @@ url: "http://yourdomain.com" # the base hostname & protocol for your site
 twitter_username: konjoot
 github_username:  konjoot
 author: Максимов Сергей
-blog: блог
-campaign_against_illiteracy: ликбез
-about: эбаут
+blog:
+  name: блог
+  path: '/'
+cai:
+  name: ликбез
+  path: 'cai.html'
+about:
+  name: эбаут
+  path: '/about/index.html'
 
 # Build settings
 markdown: kramdown

@@ -1,13 +1,14 @@
 <div class="sidebar-wrapper">
   <div class="sidebar-content">
     <ul class="sidebar-list">
-      <li><a href="#">  {{ site.blog }}  </a>
+      <li>
+        <a class="{% if page.path == 'index.html' %}active{% endif %}" href="{{ site.blog.path }}">  {{ site.blog.name }} </a>
       </li>
       <li>
-        <a class="active" href="#"> {{ site.campaign_against_illiteracy }}  </a>
+        <a class="{% if page.path == 'cai.html' %}active{% endif %}" href="{{ site.cai.path }}"> {{ site.cai.name }}  </a>
       </li>
       <li>
-        <a href="#"> {{ site.about }}  </a>
+        <a class="{% if page.path == 'about.md' %}active{% endif %}" href="{{ site.about.path }}"> {{ site.about.name }}  </a>
       </li>
     </ul>
   </div>
