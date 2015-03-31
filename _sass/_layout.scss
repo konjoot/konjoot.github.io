@@ -274,7 +274,7 @@
     a {
         color: $grey-color-dark;
 
-        &.active { color: lighten($brand-color, 20%); }
+        &.active { color: $brand-color; }
 
         &.active:hover, &:hover {
             color: lighten($brand-color, 10%);

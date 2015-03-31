@@ -10,9 +10,9 @@
     <div class="page-content">
       <div class="wrapper">
         {% include sidebar.html %}
-        <div class="border-container left"><div class="border"></div></div>
+        {% if page.id %}<div class="border-container left"><div class="border"></div></div>{% endif %}
         {{ content }}
-        <div class="border-container right"><div class="border"></div></div>
+        {% if page.id %}<div class="border-container right"><div class="border"></div></div>{% endif %}
         {% include social_sidebar.html %}
       </div>
     </div>
