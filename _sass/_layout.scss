@@ -311,9 +311,10 @@
     }
 
     .social-sidebar-content {
-        position: relative;
-        width: auto;
-        bottom: auto;
+        position: fixed;
+        width: 100%;
+        bottom: 3em;
+        right: 3em;
     }
 
     .social-media-list > li {
