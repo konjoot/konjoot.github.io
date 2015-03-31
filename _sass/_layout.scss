@@ -306,15 +306,24 @@
 
     .social-sidebar-wrapper {
         position: relative;
-        width: auto;
+        display: block;
+        width: 100%;
         right: auto;
+        -moz-transform: rotateX(180deg);
+        -ms-transform: rotateX(180deg);
+        -o-transform: rotate(180deg);
+        -webkit-transform: rotateX(180deg);
+        transform: rotateX(180deg);
     }
 
     .social-sidebar-content {
-        position: fixed;
+        position: relative;
         width: 100%;
-        bottom: 3em;
-        right: 3em;
+        -moz-transform: rotateX(180deg);
+        -ms-transform: rotateX(180deg);
+        -o-transform: rotate(180deg);
+        -webkit-transform: rotateX(180deg);
+        transform: rotateX(180deg);
     }
 
     .social-media-list > li {
