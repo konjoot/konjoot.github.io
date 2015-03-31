@@ -6,10 +6,10 @@
         <a class="{% if page.path == 'index.html' or page.category == 'blog' %}active{% endif %}" href="{{ site.blog.path }}">  {{ site.blog.name }} </a>
       </li>
       <li>
-        <a class="{% if page.path == 'cai.html' or page.category == 'cai' %}active{% endif %}" href="{{ site.cai.path }}"> {{ site.cai.name }}  </a>
+        <a class="{% if page.path == 'cai/index.html' or page.category == 'cai' %}active{% endif %}" href="{{ site.cai.path }}"> {{ site.cai.name }}  </a>
       </li>
       <li>
-        <a class="{% if page.path == 'about.md' %}active{% endif %}" href="{{ site.about.path }}"> {{ site.about.name }}  </a>
+        <a class="{% if page.path == 'about/index.md' %}active{% endif %}" href="{{ site.about.path }}"> {{ site.about.name }}  </a>
       </li>
     </ul>
   </div>

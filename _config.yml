@@ -13,7 +13,7 @@ blog:
   path: '/'
 cai:
   name: ликбез
-  path: '/cai.html'
+  path: '/cai/index.html'
 about:
   name: эбаут
   path: '/about/index.html'
