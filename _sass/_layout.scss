@@ -327,8 +327,10 @@
     }
 
     .social-media-list {
-        bottom: 4em;
-        right: 1em;
+        position: absolute;
+        display: block;
+        bottom: 3em;
+        right: 3em;
     }
 
     .social-media-list > li {
