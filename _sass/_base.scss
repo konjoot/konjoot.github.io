@@ -92,6 +92,7 @@ h1, h2, h3, h4, h5, h6 {
 a {
     color:  $brand-color;
     text-decoration: none;
+    path { fill: lighten($brand-color, 10%); }
 
     &:visited {
         color: darken($brand-color, 15%);
@@ -100,6 +101,7 @@ a {
     &:hover {
         color: lighten($brand-color, 10%);
         text-decoration: none;
+        path { fill: $brand-color; }
     }
 }
 
@@ -241,7 +243,7 @@ pre {
 
     > svg {
         display: inline-block;
-        width: 20px;
+        width: auto;
         height: 20px;
         vertical-align: middle;
         margin: 5px;
