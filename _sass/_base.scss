@@ -9,6 +9,7 @@ dl, dd, ol, ul, figure {
 }
 
 
+
 /**
  * Basic styling
  */
@@ -18,9 +19,7 @@ body {
     line-height: $base-line-height;
     font-weight: 300;
     color: $text-color;
-    // background-color: $background-color;
-    // background-color: #dfdfbf;
-    background-color: beige;
+    background-color: $background-color;
     -webkit-text-size-adjust: 100%;
 }
 
@@ -90,18 +89,12 @@ h1, h2, h3, h4, h5, h6 {
  * Links
  */
 a {
-    color:  $brand-color;
+    color: $brand-color;
     text-decoration: none;
-    path { fill: lighten($brand-color, 10%); }
-
-    &:visited {
-        color: darken($brand-color, 15%);
-    }
 
     &:hover {
-        color: lighten($brand-color, 10%);
-        text-decoration: none;
-        path { fill: $brand-color; }
+        color: $brand-color-light;
+        text-decoration: underline;
     }
 }
 
@@ -130,39 +123,11 @@ blockquote {
  */
 pre,
 code {
-    font-size: 15px;
-    // border: 1px solid $grey-color-light;
-    // border-radius: 3px;
-    // border: 1px solid black;
-    background-color: darkslategrey;
-    color: navajowhite;
+    font-size: $base-font-size;
+    border: 1px solid $grey-color-light;
+    border-radius: 3px;
+    background-color: #eef;
 }
-
-
-.highlight > pre {
-    -webkit-border-radius: 5px;
-    -moz-border-radius: 5px;
-    border-radius: 5px;
-    -webkit-box-shadow: inset 0 1px 10px rgba(0,0,0,0.3),0 1px 0 rgba(47, 79, 79, 1),0 2px 0 rgba(24, 30, 38, 0.5);
-    -moz-box-shadow: inset 0 1px 10px rgba(0,0,0,0.3),0 1px 0 rgba(47, 79, 79, 1),0 2px 0 rgba(24, 30, 38, 0.5);
-    box-shadow: inset 0 1px 10px rgba(0,0,0,0.3),0 1px 0 rgba(47, 79, 79, 1),0 2px 0 rgba(24, 30, 38, 0.5);
-
-    code {
-        box-shadow: none;
-        -webkit-box-shadow: none;
-        -moz-box-shadow: none;
-    }
-}
-
-code {
-    -webkit-border-radius: 5px;
-    -moz-border-radius: 5px;
-    border-radius: 5px;
-    -webkit-box-shadow: inset 0 1px 10px rgba(0,0,0,0.3),0 1px 0 rgba(47, 79, 79, 1),0 2px 0 rgba(24, 30, 38, 0.5);
-    -moz-box-shadow: inset 0 1px 10px rgba(0,0,0,0.3),0 1px 0 rgba(47, 79, 79, 1),0 2px 0 rgba(24, 30, 38, 0.5);
-    box-shadow: inset 0 1px 10px rgba(0,0,0,0.3),0 1px 0 rgba(47, 79, 79, 1),0 2px 0 rgba(24, 30, 38, 0.5);
-}
-
 
 code {
     padding: 1px 5px;
@@ -170,7 +135,7 @@ code {
 
 pre {
     padding: 8px 12px;
-    overflow-x: auto;
+    overflow-x: scroll;
 
     > code {
         border: 0;
@@ -185,14 +150,12 @@ pre {
  * Wrapper
  */
 .wrapper {
-    position: relative;
     max-width: -webkit-calc(800px - (#{$spacing-unit} * 2));
     max-width:         calc(800px - (#{$spacing-unit} * 2));
     margin-right: auto;
     margin-left: auto;
     padding-right: $spacing-unit;
     padding-left: $spacing-unit;
-
     @extend %clearfix;
 
     @include media-query($on-laptop) {
@@ -203,23 +166,6 @@ pre {
     }
 }
 
-.border-container {
-    position: absolute;
-    top: 0;
-    &.left{ left: 0 }
-    &.right{ right: 0 }
-}
-
-.border {
-    position: fixed;
-    height: 80%;
-    width: 1px;
-    border: 0;
-    background-image: -webkit-linear-gradient(top, transparent, #46433A, transparent);
-    background-image: -moz-linear-gradient(top, transparent, #46433A, transparent);
-    background-image: -ms-linear-gradient(top, transparent, #46433A, transparent);
-    background-image: -o-linear-gradient(top, transparent, #46433A, transparent);
-}
 
 
 /**
@@ -243,9 +189,12 @@ pre {
 
     > svg {
         display: inline-block;
-        width: auto;
-        height: 20px;
+        width: 16px;
+        height: 16px;
         vertical-align: middle;
-        margin: 5px;
+
+        path {
+            fill: $grey-color;
+        }
     }
 }

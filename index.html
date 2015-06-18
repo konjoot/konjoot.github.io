@@ -1,24 +1,42 @@
 ---
 layout: default
-title: blog
 ---
 
 <div class="home">
 
-  <!-- <h1 class="page-heading">Posts</h1> -->
-
   <ul class="post-list">
-    {% for post in site.categories.blog %}
+    {% for post in site.posts %}
       <li>
-        <span class="post-meta">{{ post.date | date: "%b %-d, %Y" }}</span>
-
         <h2>
+          <span class="post-meta">{{ post.date | date: "%b %-d, %Y" }}</span>
           <a class="post-link" href="{{ post.url | prepend: site.baseurl }}">{{ post.title }}</a>
         </h2>
       </li>
     {% endfor %}
+    <li>
+      <h2>
+        <span class="post-meta">Jun 16, 2015</span>
+        <a class="post-link" href="{{ post.url | prepend: site.baseurl }}">Что то еще?...</a>
+      </h2>
+    </li>
+    <li>
+      <h2>
+        <span class="post-meta">Jun 15, 2015</span>
+        <a class="post-link" href="{{ post.url | prepend: site.baseurl }}">Как я был в Израиле</a>
+      </h2>
+    </li>
+    <li>
+      <h2>
+        <span class="post-meta">Jun 14, 2015</span>
+        <a class="post-link" href="{{ post.url | prepend: site.baseurl }}">Что то еще?...</a>
+      </h2>
+    </li>
+    <li>
+      <h2>
+        <span class="post-meta">Jun 13, 2015</span>
+        <a class="post-link" href="{{ post.url | prepend: site.baseurl }}">Трудно быть блогом!</a>
+      </h2>
+    </li>
   </ul>
-
-  <!-- <p class="rss-subscribe">subscribe <a href="{{ "/feed.xml" | prepend: site.baseurl }}">via RSS</a></p> -->
 
 </div>

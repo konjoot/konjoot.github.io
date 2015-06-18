@@ -3,30 +3,33 @@
 ---
 @charset "utf-8";
 
-@import "fonts";
+
 
 // Our variables
-$base-font-family: "PTSerifCaption", Helvetica, Arial, sans-serif;
-$title-font-family: "Lobster", serif;
-$base-font-size:   16px;
-$small-font-size:  $base-font-size * 0.875;
-$base-line-height: 1.5;
+$base-font-family:   "Ubuntu Mono","menlo",monospace;
+$base-font-size:     16px;
+$large-font-size:    $base-font-size * 1.125;
+$xxl-font-size:      $large-font-size * 1.25;
+$small-font-size:    15px;
+$base-line-height:   1.5;
 
-$spacing-unit:     30px;
-$spacing-unit-sm:  10px;
+$spacing-unit:       30px;
 
-$text-color:       #111;
-$background-color: whitesmoke;
-// $brand-color:      darkslateblue;
-$brand-color:      indianred;
+$text-color:         #111;
+$background-color:   #fff;
+$brand-color:        rgb(221, 72, 20);
 
-$grey-color:       #828282;
-$grey-color-light: lighten($grey-color, 40%);
-$grey-color-dark:  darken($grey-color, 25%);
+$brand-color-light:  lighten($brand-color, 10%);
 
-$on-palm:          600px;
-$on-laptop:        800px;
-$on-laptop-2:      1030px;
+$grey-color:         #828282;
+$grey-color-light:   lighten($grey-color, 40%);
+$grey-color-dark:    darken($grey-color, 25%);
+$title-color:        #424242;
+// $title-color:        rgb(119, 41, 83);
+// $title-color:        $grey-color-dark;
+
+$on-palm:            600px;
+$on-laptop:          800px;
 
 
 
