@@ -36,7 +36,6 @@ ul, ol, dl, figure,
 }
 
 
-
 /**
  * Images
  */
@@ -124,18 +123,22 @@ blockquote {
 pre,
 code {
     font-size: $base-font-size;
+    font-family: $base-font-family;
     border: 1px solid $grey-color-light;
     border-radius: 3px;
-    background-color: #eef;
+    background-color: $pcode-back-color;
 }
 
 code {
+    // background-color: $code-back-color;
+    // border-color: $grey-color-dark;
+    // color: $code-color;
     padding: 1px 5px;
 }
 
 pre {
     padding: 8px 12px;
-    overflow-x: scroll;
+    overflow-x: auto;
 
     > code {
         border: 0;

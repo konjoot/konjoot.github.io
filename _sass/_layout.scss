@@ -206,7 +206,7 @@
 }
 
 .post-title {
-    font-size: $xxl-font-size;
+    font-size: $xxl-font-size*1.25;
     letter-spacing: -1px;
     font-weight: bold;
     line-height: 1;
@@ -224,7 +224,7 @@
         font-weight: bold;
 
         @include media-query($on-laptop) {
-            font-size: $xxl-font-size;
+            font-size: $base-font-size;
         }
     }
 
@@ -233,7 +233,7 @@
         font-style: italic;
 
         @include media-query($on-laptop) {
-            font-size: $large-font-size;
+            font-size: $base-font-size;
         }
     }
 }
