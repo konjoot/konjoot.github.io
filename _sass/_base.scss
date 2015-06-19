@@ -124,15 +124,15 @@ pre,
 code {
     font-size: $base-font-size;
     font-family: $base-font-family;
-    border: 1px solid $grey-color-light;
+    border: 1px solid $grey-color-dark;
     border-radius: 3px;
     background-color: $pcode-back-color;
 }
 
 code {
-    // background-color: $code-back-color;
-    // border-color: $grey-color-dark;
-    // color: $code-color;
+    background-color: $code-back-color;
+    border-color: $grey-color-dark;
+    color: $code-color;
     padding: 1px 5px;
 }
 
