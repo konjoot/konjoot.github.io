@@ -229,8 +229,8 @@
     }
 
     h3 {
-        font-size: $large-font-size;
-        font-style: italic;
+        font-size: $medium-font-size;
+        font-weight: bold;
 
         @include media-query($on-laptop) {
             font-size: $base-font-size;
