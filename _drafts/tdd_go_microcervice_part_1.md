@@ -10,7 +10,7 @@ categories: posts
 
 Данное приложение служит одной цели - демонстрация процесса создания RESTfull-сервиса на Go. Соотв. будут рассмотрено то, с чем сталкивается бэкендер большую часть рабочего времени:
 
-* просто ресурс (одна таблица)
+* простой ресурс (одна таблица)
 * сложный ресурс (несколько таблиц)
 * вложенный ресурс (parent\\:id\children)
 * вложенный shallow-ресурс (parent\\:id\children\\:id -> children\\:id)
@@ -28,8 +28,7 @@ categories: posts
 
 Ну и да, я так же предполагаю, что вы используете nix-подобную ОС.
 
-Тестовое окружение и первый тест
---------------------------------
+##Тестовое окружение и первый тест##
 
 Для начала ставим ginkgo.
 
@@ -108,11 +107,12 @@ gomega создаст файл, `reeky_test.go`
 		NegatedFailureMessage(actual interface{}) (message string)
 	}
 
-Моки и соотв. матчеры пока будем хранить вместе, поэтому создаем папку `mocks`, для этих целей. И в ней создаем файл `engine.go`, где пока будет только реализация матчера BeRunning, а в последствие и моки EngineMock:
+Матчеры будем хранить в папке `matchers`. В ней создаем файл `be_running.go`:
 
-	package mocks
+	package matchers
 
 	import (
+		. "github.com/konjoot/reeky/mocks"
 		"github.com/onsi/gomega/format"
 		"github.com/onsi/gomega/matchers"
 	)
@@ -124,7 +124,7 @@ gomega создаст файл, `reeky_test.go`
 	type beRunningMatcher struct{}
 
 	func (m *beRunningMatcher) Match(actual interface{}) (success bool, err error) {
-		return (&matchers.BeTrueMatcher{}).Match(actual.(*EngineMock).isRunning)
+		return (&matchers.BeTrueMatcher{}).Match(actual.(*EngineMock).IsRunning())
 	}
 
 	func (m *beRunningMatcher) FailureMessage(actual interface{}) (message string) {
@@ -133,36 +133,19 @@ gomega создаст файл, `reeky_test.go`
 
 	func (m *beRunningMatcher) NegatedFailureMessage(actual interface{}) (message string) {
 		return format.Message(actual, "not to be running")
-	}
+}
 
-Теперь осталось написать моку EngineMock, для начала определимся с интерфейсом. Создадим папку interfaces и соотв. файл interfaces.go, куда будем складывать интерфейсы, используемые в нашем приложении:
-
-	package interfaces
-
-	type EngineIface interface{
-	  Run(addr string) (err error)
-	}
-
-Сейчас наш интерфейс незамысловат, т.к. мы пока хотим только запускать gin на указанном порту.
-
-Теперь займемся мокой:
+Теперь займемся мокой, создаем папку `mocks` в ней файл `engine.go`:
 
 	package mocks
 
-	import (
-		. "github.com/konjoot/reeky/interfaces"
-		"github.com/onsi/gomega/format"
-		"github.com/onsi/gomega/matchers"
-	)
-
 	type EngineMock struct {
-		EngineIface
-		port      string
-		isRunning bool
+		port    string
+		running bool
 	}
 
 	func (e *EngineMock) Run(addr string) (err error) {
-		e.port, e.isRunning = addr, true
+		e.port, e.running = addr, true
 		return
 	}
 
@@ -170,16 +153,21 @@ gomega создаст файл, `reeky_test.go`
 		return e.port
 	}
 
-И последнее, чтобы тест заработал создадим App, принимающую в поле Engine интерфейс EngineIface, с пустым методом RunOn() в модуле reeky:
+	func (e *EngineMock) IsRunning() bool {
+		return e.running
+	}
+
+
+И последнее, чтобы тест заработал создадим App, принимающую в поле Engine указатель на gin.Engine, с пустым методом RunOn() в модуле reeky:
 
 	package reeky
 
 	import (
-		. "github.com/konjoot/reeky/interfaces"
+		"github.com/gin-gonic/gin"
 	)
 
 	type App struct {
-		Engine EngineIface
+		Engine *gin.Engine
 	}
 
 	func (app *App) RunOn(port string) {}
@@ -216,15 +204,15 @@ gomega создаст файл, `reeky_test.go`
 	FAIL! -- 0 Passed | 1 Failed | 0 Pending | 0 Skipped --- FAIL: TestReeky (0.00s)
 	FAIL
 
-Дработка reeky.App и рефакторинг
---------------------------------
+##Дработка reeky.App и рефакторинг##
+
 Чтобы наш тест стал зеленым, необходимо доработать метод RunOn следущим образом:
 
 	func (app *App) RunOn(port string) {
 		app.Engine.Run(":" + port)
 	}
 
-Теперь тест проходит, поэтому займемся рефакторингом, мы совсем забыли о модуле main, в который будет инициализировать и стартовать наше приложение, плюс модуль reeky уже давно направшивается на перенос в отдельную папку. Поэтому создаем папку reeky, куда отправим файлы `reeky.go`, `reeky_suite_test.go` и `reeky_test.go`. В рутовой папке создаем файл main.go следующего содержания:
+Теперь тест проходит, поэтому займемся рефакторингом. Мы совсем забыли о модуле main, который будет инициализировать и стартовать наше приложение, плюс модуль reeky уже давно направшивается на перенос в отдельную папку. Поэтому создаем папку reeky, куда отправим файлы `reeky.go`, `reeky_suite_test.go` и `reeky_test.go`. В рутовой папке создаем файл main.go следующего содержания:
 
 	package main
 
@@ -244,11 +232,101 @@ gomega создаст файл, `reeky_test.go`
 
 Но пока наше приложение абсолютно бесполезно, т.к. нет ни одного роута и на любой запрос будет ответ 404.
 
+##CRUD boards##
 
-Роуты
------
+Начнем с реализации ресурса boards, первое, что нам понадобится - это роуты, приступим!
 
-todo:
+###Тесты роутов###
 
-* тесты роутов
-* реализация
+
+Создаем файл `reeky/routes_test.go` и пишем тесты:
+
+	package reeky_test
+
+	import (
+		"github.com/gin-gonic/gin"
+		. "github.com/konjoot/reeky/matchers"
+		. "github.com/konjoot/reeky/reeky"
+		. "github.com/onsi/ginkgo"
+		. "github.com/onsi/gomega"
+	)
+
+	var _ = Describe("App", func() {
+		var (
+			app    *App
+			engine *gin.Engine
+		)
+
+		BeforeEach(func() {
+			gin.SetMode(gin.TestMode)
+			engine = gin.New()
+			app = &App{Engine: engine}
+			app.SetRoutes()
+		})
+
+		Describe("Routes", func() {
+			It("/boards", func() {
+				Expect(engine).To(Handle("GET").On("/boards/:id").By("Getter"))
+				Expect(engine).To(Handle("GET").On("/boards").By("ListGetter"))
+				Expect(engine).To(Handle("PUT").On("/boards/:id").By("Updater"))
+				Expect(engine).To(Handle("POST").On("/boards").By("Creator"))
+				Expect(engine).To(Handle("DELETE").On("/boards/:id").By("Destroyer"))
+			})
+		})
+	})
+
+
+Для работы теста нужно сделать две вещи:
+
+* реализовать матчер Handle()
+* создать пустой метод SetRoutes() у `app *App`
+
+Матчер пишем по аналогии с предыдущим, так же в папке `matchers` создаем файл `handle.go`:
+
+	package matchers
+
+	package matchers
+
+	import (
+		"github.com/gin-gonic/gin"
+		"github.com/onsi/gomega/format"
+		"github.com/onsi/gomega/matchers"
+	)
+
+	func Handle(method string) *handleMatcher {
+		return &handleMatcher{expected: gin.RouteInfo{Method: method}}
+	}
+
+	type handleMatcher struct {
+		expected gin.RouteInfo
+	}
+
+	func (m *handleMatcher) On(path string) *handleMatcher {
+		m.expected.Path = path
+		return m
+	}
+
+	func (m *handleMatcher) By(handler string) *handleMatcher {
+		m.expected.Handler = "github.com/konjoot/reeky/reeky." + handler
+		return m
+	}
+
+	func (m *handleMatcher) Match(actual interface{}) (success bool, err error) {
+		return (&matchers.ContainElementMatcher{Element: m.expected}).Match(actual.(*gin.Engine).Routes())
+	}
+
+	func (m *handleMatcher) FailureMessage(actual interface{}) (message string) {
+		return format.Message(actual.(*gin.Engine).Routes(), "to have route", m.expected)
+	}
+
+	func (m *handleMatcher) NegatedFailureMessage(actual interface{}) (message string) {
+		return format.Message(actual.(*gin.Engine).Routes(), "not to have route", m.expected)
+	}
+
+И добавляем пустой метод SetRoutes в App:
+
+	func (app *App) SetRoutes() (ok bool) {
+		return
+	}
+
+Тест заработал, теперь дело за самими роутами.
