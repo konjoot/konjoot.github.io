@@ -330,3 +330,90 @@ gomega создаст файл, `reeky_test.go`
 	}
 
 Тест заработал, теперь дело за самими роутами.
+
+###Роуты###
+
+Создаем файл `reeky/routes.go`, куда переносим метод SetRoutes() дописываем его, чтобы тест проходил:
+
+	package reeky
+
+	func (app *App) SetRoutes() (ok bool) {
+		app.Engine.GET("/boards/:id", Getter)
+		app.Engine.GET("/boards", ListGetter)
+		app.Engine.PUT("/boards/:id", Updater)
+		app.Engine.POST("/boards", Creator)
+		app.Engine.DELETE("/boards/:id", Destroyer)
+		return
+	}
+
+А так же создаем файл `reeky/handlers.go`, где объявляем наши, пока пустые, ручки:
+
+	package reeky
+
+	import "github.com/gin-gonic/gin"
+
+	func ListGetter(c *gin.Context) {}
+	func Getter(c *gin.Context)     {}
+	func Creator(c *gin.Context)    {}
+	func Updater(c *gin.Context)    {}
+	func Destroyer(c *gin.Context)  {}
+
+Теперь тест проходит, однако нужно доработать метод RunOn(), чтобы перед запуском приложения вызывался метод SetRoutes(). И соответственно, дописать тест `reeky_test.go`.
+
+Обновленный тест будет выглядеть так:
+
+	Describe("RunOn", func() {
+		It("should run engine on specified port", func() {
+			Expect(engine).NotTo(BeRunning())
+			Expect(engine.Port()).To(BeZero())
+			Expect(engine).NotTo(HaveRoutes())
+
+			app.RunOn(port)
+
+			Expect(engine).To(BeRunning())
+			Expect(engine.Port()).To(Equal(":" + port))
+			Expect(engine).To(HaveRoutes())
+		})
+	})
+
+Для его работы нужно доработать EngineMock:
+
+	type EngineMock struct {
+		port    string
+		running bool
+		routes  bool
+	}
+	...
+	func (e *EngineMock) Routes() bool {
+		return e.routes
+	}
+
+И написать новый матчер HaveRoutes(). По аналогии с др. матчерами создаем файл `matchers/have_routes.go`:
+
+	package matchers
+
+	import (
+		. "github.com/konjoot/reeky/mocks"
+		"github.com/onsi/gomega/format"
+		"github.com/onsi/gomega/matchers"
+	)
+
+	func HaveRoutes() *haveRoutesMatcher {
+		return &haveRoutesMatcher{}
+	}
+
+	type haveRoutesMatcher struct{}
+
+	func (m *haveRoutesMatcher) Match(actual interface{}) (success bool, err error) {
+		return (&matchers.BeTrueMatcher{}).Match(actual.(*EngineMock).Routes())
+	}
+
+	func (m *haveRoutesMatcher) FailureMessage(actual interface{}) (message string) {
+		return format.Message(actual, "to have routes")
+	}
+
+	func (m *haveRoutesMatcher) NegatedFailureMessage(actual interface{}) (message string) {
+		return format.Message(actual, "not to have routes")
+	}
+
+
