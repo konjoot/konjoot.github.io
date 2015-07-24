@@ -4,9 +4,9 @@ title:  "TDD микросервиса на Go. Часть 1"
 categories: posts
 ---
 
-Захотелось на работе продвинуть Go, но слов порой недостаточно, особенно в вопросах выбора языка, поэтому захотелось написать небольшой сервис на Go, на примере которого можно наглядно продемонстрировать процесс разработки на Go, плюс снять бэнчи и т.д.
+Захотелось на работе продвинуть Go, но слов порой недостаточно, особенно в вопросах выбора языка, поэтому захотелось написать небольшой сервис на Go, на примере которого можно наглядно продемонстрировать процесс разработки, плюс снять бэнчи.
 
-В этой статье будет рассмотрен процесс создания микросервиса на Go в качестве http-роутера будем использовать gin, для работы с БД (postgres) sqlx и т.к. TDD наше всё, то в довесок к пакету testing, да простит меня Роб Пайк, будет использована замечательная либа ginkgo.
+В этой статье я подробно опишу свою работу над сервисом в качестве http-роутера будем использовать `echo`, в качестве БД будем использовать Postgresql, для работы с БД - `sqlx` и т.к. TDD наше всё, то в довесок к пакету `testing`, да простит меня Роб Пайк, будет использована замечательная либа `ginkgo`.
 
 Данное приложение служит одной цели - демонстрация процесса создания RESTfull-сервиса на Go. Соотв. будут рассмотрено то, с чем сталкивается бэкендер большую часть рабочего времени:
 
@@ -18,7 +18,7 @@ categories: posts
 * фильтрация
 * пагинация
 
-За основу возьмем замечательный ресурс [trello.com](https://trello.com), соотв. начнем с ресурса boards, и для каждого из пунктов, перечисленных выше, будет выбран подходящий ресурс\набор ресурсов от туда.
+Будем реализовывать кальку с [trello.com](https://trello.com), соотв. начнем с ресурса boards, и для каждого из пунктов, перечисленных выше, будет выбран подходящий ресурс\набор ресурсов оттуда.
 
 Я предполагаю, что рабочее окружение для Go у вас уже настроено, если нет, то вам [сюда](https://golang.org/doc/code.html).
 
@@ -65,7 +65,7 @@ gomega создаст файл, `reeky_test.go`
 
 	package reeky
 
-И напишем наш первый тест. Наше приложение должно запускать gin на указанном порту, поэтому мы можем написать так:
+И напишем наш первый тест. Наше приложение должно запускать `echo` на указанном порту, поэтому мы можем написать так:
 
 	var _ = Describe("Reeky", func() {
 		var (
@@ -93,11 +93,9 @@ gomega создаст файл, `reeky_test.go`
 		})
 	})
 
-Как видно из теста, мы ожидаем, что у нашего приложения будет структура App, с полем Engine, в это поле предполагаем передавать gin.Engine, но для тестов мы будем использовать самописную моку EngineMock. У инстанса `app *App` предполагается наличие метода RunOn, с сигнатурой `func (app * App) RunOn(port string)`.
+Как видно из теста, мы ожидаем, что у нашего приложения будет структура App, с полем Engine, в это поле предполагаем передавать указатель на `echo.Echo`, но для тестов мы будем использовать самописную моку EngineMock. У инстанса `app *App` предполагается наличие метода RunOn, с сигнатурой `func (app * App) RunOn(port string)`.
 
 А так же нам потребуется кастомный матчер BeRunning().
-
-Здесь можно долго дискутировать на тему зачем все эти усложнения с кастомными матчерами, моками и ginkgo, но мое мнение неизменно, хорошо написанного приложения без хорошо написанных, а главное читабельных тестов не существует. Поэтому к написанию тестов я буду предъявлять повышенные требования в ходе дальнейшей работы над проектом.
 
 Для начала нам нужно получить работающий тест. Начнем с матчера BeRunning. Кастомный матчер для gomega должен реализовывать интерфейс:
 
@@ -157,20 +155,29 @@ gomega создаст файл, `reeky_test.go`
 		return e.running
 	}
 
-
-И последнее, чтобы тест заработал создадим App, принимающую в поле Engine указатель на gin.Engine, с пустым методом RunOn() в модуле reeky:
+И последнее, чтобы тест заработал создадим App, принимающую в поле Engine интерфейс EngineIface, с пустым методом RunOn() в модуле reeky:
 
 	package reeky
 
 	import (
-		"github.com/gin-gonic/gin"
+		. "github.com/konjoot/reeky/interfaces"
 	)
 
 	type App struct {
-		Engine *gin.Engine
+		Engine EngineIface
 	}
 
 	func (app *App) RunOn(port string) {}
+
+И создаем папку `interfaces` где будет находиться файл `engine.go`, описывающий соотв. интерфейс:
+
+	package interfaces
+
+	type EngineIface interface {
+		Run(addr string)
+	}
+
+Как видим, пока предполагается использовать у `echo` только один метод `Run(addr string)`.
 
 Теперь наш тест компилируется и его можно запустить:
 
@@ -197,7 +204,7 @@ gomega создаст файл, `reeky_test.go`
 
 	Summarizing 1 Failure:
 
-	[Fail] Reeky RunOn [It] should run engine on specified port 
+	[Fail] Reeky RunOn [It] should run engine on specified port
 	/home/maksimov/go/src/github.com/konjoot/reeky/reeky_test.go:31
 
 	Ran 1 of 1 Specs in 0.002 seconds
@@ -217,16 +224,16 @@ gomega создаст файл, `reeky_test.go`
 	package main
 
 	import (
-		"github.com/gin-gonic/gin"
 		"github.com/konjoot/reeky/reeky"
+		"github.com/labstack/echo"
 	)
 
 	func main() {
-		app := &reeky.App{Engine: gin.Default()}
+		app := &reeky.App{Engine: echo.New()}
 		app.RunOn("8080")
 	}
 
-Теперь мы можем его скомпилировать командой `go build -o app` и запустить `./app`. Как видим все работает, приложение благополучно запусткает gin на порту 8080.
+Теперь мы можем его скомпилировать командой `go build -o app` и запустить `./app`. Как видим все работает, приложение благополучно запусткает `echo` на порту 8080.
 
 Т.к. наши тесты из рута переехали в папку reeky, то запускать их нужно командой `ginkgo -r`.
 
@@ -238,15 +245,14 @@ gomega создаст файл, `reeky_test.go`
 
 ###Тесты роутов###
 
-
 Создаем файл `reeky/routes_test.go` и пишем тесты:
 
 	package reeky_test
 
 	import (
-		"github.com/gin-gonic/gin"
 		. "github.com/konjoot/reeky/matchers"
 		. "github.com/konjoot/reeky/reeky"
+		"github.com/labstack/echo"
 		. "github.com/onsi/ginkgo"
 		. "github.com/onsi/gomega"
 	)
@@ -254,14 +260,13 @@ gomega создаст файл, `reeky_test.go`
 	var _ = Describe("App", func() {
 		var (
 			app    *App
-			engine *gin.Engine
+			engine *echo.Echo
 		)
 
 		BeforeEach(func() {
-			gin.SetMode(gin.TestMode)
-			engine = gin.New()
+			engine = echo.New()
 			app = &App{Engine: engine}
-			app.SetRoutes()
+			app.Setup()
 		})
 
 		Describe("Routes", func() {
@@ -279,26 +284,24 @@ gomega создаст файл, `reeky_test.go`
 Для работы теста нужно сделать две вещи:
 
 * реализовать матчер Handle()
-* создать пустой метод SetRoutes() у `app *App`
+* создать пустой метод Setup() у `app *App`
 
 Матчер пишем по аналогии с предыдущим, так же в папке `matchers` создаем файл `handle.go`:
 
 	package matchers
 
-	package matchers
-
 	import (
-		"github.com/gin-gonic/gin"
+		"github.com/labstack/echo"
 		"github.com/onsi/gomega/format"
 		"github.com/onsi/gomega/matchers"
 	)
 
 	func Handle(method string) *handleMatcher {
-		return &handleMatcher{expected: gin.RouteInfo{Method: method}}
+		return &handleMatcher{expected: echo.Route{Method: method}}
 	}
 
 	type handleMatcher struct {
-		expected gin.RouteInfo
+		expected echo.Route
 	}
 
 	func (m *handleMatcher) On(path string) *handleMatcher {
@@ -312,108 +315,212 @@ gomega создаст файл, `reeky_test.go`
 	}
 
 	func (m *handleMatcher) Match(actual interface{}) (success bool, err error) {
-		return (&matchers.ContainElementMatcher{Element: m.expected}).Match(actual.(*gin.Engine).Routes())
+		return (&matchers.ContainElementMatcher{Element: m.expected}).Match(actual.(*echo.Echo).Routes())
 	}
 
 	func (m *handleMatcher) FailureMessage(actual interface{}) (message string) {
-		return format.Message(actual.(*gin.Engine).Routes(), "to have route", m.expected)
+		return format.Message(actual.(*echo.Echo).Routes(), "to have route", m.expected)
 	}
 
 	func (m *handleMatcher) NegatedFailureMessage(actual interface{}) (message string) {
-		return format.Message(actual.(*gin.Engine).Routes(), "not to have route", m.expected)
+		return format.Message(actual.(*echo.Echo).Routes(), "not to have route", m.expected)
 	}
 
-И добавляем пустой метод SetRoutes в App:
+И добавляем пустой метод Setup в App:
 
-	func (app *App) SetRoutes() (ok bool) {
+	func (app *App) Setup() (ok bool) {
 		return
 	}
 
 Тест заработал, теперь дело за самими роутами.
 
+Так же нам нужно гарантировать, что приложение выполняет настройку роутов перед запуском, поэтому доработаем тест `reeky_test.go`:
+
+	package reeky_test
+
+	import (
+		. "github.com/konjoot/reeky/matchers"
+		. "github.com/konjoot/reeky/mocks"
+		. "github.com/konjoot/reeky/reeky"
+
+		. "github.com/onsi/ginkgo"
+		. "github.com/onsi/gomega"
+	)
+
+	var _ = Describe("Reeky", func() {
+		var (
+			app    *App
+			engine *EngineMock
+			port   string
+		)
+
+		BeforeEach(func() {
+			port = "8080"
+			engine = &EngineMock{}
+			app = &App{Engine: engine}
+		})
+
+		Describe("RunOn", func() {
+			It("should run engine on specified port", func() {
+				Expect(engine).NotTo(BeRunning())
+				Expect(app).NotTo(BeOk())
+				Expect(engine.Port()).To(BeZero())
+
+				app.RunOn(port)
+
+				Expect(engine).To(BeRunning())
+				Expect(app).To(BeOk())
+				Expect(engine.Port()).To(Equal(":" + port))
+			})
+		})
+	})
+
+Теперь дело за кастомным матчером `BeOk()`:
+
+	package matchers
+
+	import (
+		. "github.com/konjoot/reeky/reeky"
+		"github.com/onsi/gomega/format"
+		"github.com/onsi/gomega/matchers"
+	)
+
+	func BeOk() *beOkMatcher {
+		return &beOkMatcher{}
+	}
+
+	type beOkMatcher struct{}
+
+	func (m *beOkMatcher) Match(actual interface{}) (success bool, err error) {
+		return (&matchers.BeTrueMatcher{}).Match(actual.(*App).Ok)
+	}
+
+	func (m *beOkMatcher) FailureMessage(actual interface{}) (message string) {
+		return format.Message(actual, "to have status Ok")
+	}
+
+	func (m *beOkMatcher) NegatedFailureMessage(actual interface{}) (message string) {
+		return format.Message(actual, "not to have status Ok")
+	}
+
+Как видно из матчера у структуры App мы ожидаем наличие экспортируемого поля Ok, которое будет содержать статус настройки приложения, соотв. если настройка не произведена или завершилась с ошибкой в нем будет false.
+
+Доработаем `App`, чтобы тест прошел:
+
+	type App struct {
+		Ok     bool
+		Engine EngineIface
+	}
+
+	func (app *App) RunOn(port string) {
+		app.Setup()
+		app.Engine.Run(":" + port)
+	}
+
+	func (app *App) Setup() (ok bool) {
+		app.Ok, ok = true, true
+		return
+	}
+
+
 ###Роуты###
 
-Создаем файл `reeky/routes.go`, куда переносим метод SetRoutes() дописываем его, чтобы тест проходил:
+Создаем файл `reeky/routes.go`, куда переносим метод Setup() и дописываем его, чтобы тест проходил:
 
 	package reeky
 
-	func (app *App) SetRoutes() (ok bool) {
-		app.Engine.GET("/boards/:id", Getter)
-		app.Engine.GET("/boards", ListGetter)
-		app.Engine.PUT("/boards/:id", Updater)
-		app.Engine.POST("/boards", Creator)
-		app.Engine.DELETE("/boards/:id", Destroyer)
+	func (app *App) Setup() (ok bool) {
+		app.Engine.Get("/boards/:id", Getter)
+		app.Engine.Get("/boards", ListGetter)
+		app.Engine.Put("/boards/:id", Updater)
+		app.Engine.Post("/boards", Creator)
+		app.Engine.Delete("/boards/:id", Destroyer)
+		app.Ok, ok = true, true
 		return
 	}
+
+Расширяем интерфейс EngineIface, чтобы перечисленные методы, были доступны в сруктуре App:
+
+	package interfaces
+
+	import (
+		"github.com/labstack/echo"
+	)
+
+	type EngineIface interface {
+		Run(addr string)
+		Get(path string, h echo.Handler)
+		Put(path string, h echo.Handler)
+		Post(path string, h echo.Handler)
+		Delete(path string, h echo.Handler)
+	}
+
+И добавляем эти методы в EngineMock:
+
+	package mocks
+
+	import "github.com/labstack/echo"
+	...
+	func (e *EngineMock) Get(path string, h echo.Handler)    {}
+	func (e *EngineMock) Put(path string, h echo.Handler)    {}
+	func (e *EngineMock) Post(path string, h echo.Handler)   {}
+	func (e *EngineMock) Delete(path string, h echo.Handler) {}
 
 А так же создаем файл `reeky/handlers.go`, где объявляем наши, пока пустые, ручки:
 
 	package reeky
 
-	import "github.com/gin-gonic/gin"
+	import "github.com/labstack/echo"
 
-	func ListGetter(c *gin.Context) {}
-	func Getter(c *gin.Context)     {}
-	func Creator(c *gin.Context)    {}
-	func Updater(c *gin.Context)    {}
-	func Destroyer(c *gin.Context)  {}
-
-Теперь тест проходит, однако нужно доработать метод RunOn(), чтобы перед запуском приложения вызывался метод SetRoutes(). И соответственно, дописать тест `reeky_test.go`.
-
-Обновленный тест будет выглядеть так:
-
-	Describe("RunOn", func() {
-		It("should run engine on specified port", func() {
-			Expect(engine).NotTo(BeRunning())
-			Expect(engine.Port()).To(BeZero())
-			Expect(engine).NotTo(HaveRoutes())
-
-			app.RunOn(port)
-
-			Expect(engine).To(BeRunning())
-			Expect(engine.Port()).To(Equal(":" + port))
-			Expect(engine).To(HaveRoutes())
-		})
-	})
-
-Для его работы нужно доработать EngineMock:
-
-	type EngineMock struct {
-		port    string
-		running bool
-		routes  bool
-	}
-	...
-	func (e *EngineMock) Routes() bool {
-		return e.routes
+	func ListGetter(c *echo.Context) (err error) {
+		return
 	}
 
-И написать новый матчер HaveRoutes(). По аналогии с др. матчерами создаем файл `matchers/have_routes.go`:
-
-	package matchers
-
-	import (
-		. "github.com/konjoot/reeky/mocks"
-		"github.com/onsi/gomega/format"
-		"github.com/onsi/gomega/matchers"
-	)
-
-	func HaveRoutes() *haveRoutesMatcher {
-		return &haveRoutesMatcher{}
+	func Getter(c *echo.Context) (err error) {
+		return
 	}
 
-	type haveRoutesMatcher struct{}
-
-	func (m *haveRoutesMatcher) Match(actual interface{}) (success bool, err error) {
-		return (&matchers.BeTrueMatcher{}).Match(actual.(*EngineMock).Routes())
+	func Creator(c *echo.Context) (err error) {
+		return
 	}
 
-	func (m *haveRoutesMatcher) FailureMessage(actual interface{}) (message string) {
-		return format.Message(actual, "to have routes")
+	func Updater(c *echo.Context) (err error) {
+		return
 	}
 
-	func (m *haveRoutesMatcher) NegatedFailureMessage(actual interface{}) (message string) {
-		return format.Message(actual, "not to have routes")
+	func Destroyer(c *echo.Context) (err error) {
+		return
 	}
 
+Теперь тест проходит. Однако, если скомпилировать и запустить приложение, в консоли не появится абсолютно ничего, приложение хранит полное молчание, самое время воспользоваться middleware, которое заботливо предоставляет Echo:
+
+	# reeky/routes.go
+	package reeky
+
+	import mw "github.com/labstack/echo/middleware"
+
+	func (app *App) Setup() (ok bool) {
+		// Middleware
+		app.Engine.Use(mw.Logger())
+		app.Engine.Use(mw.Recover())
+
+		// Routes
+		app.Engine.Get("/boards/:id", Getter)
+		app.Engine.Get("/boards", ListGetter)
+		app.Engine.Put("/boards/:id", Updater)
+		app.Engine.Post("/boards", Creator)
+		app.Engine.Delete("/boards/:id", Destroyer)
+		app.Ok, ok = true, true
+		return
+	}
+
+Так же потребуется расширить EngineIface новым методом Use и EngineMock.
+
+Теперь все работает. Осталось написать соотв. ручки. Но сначала рефакторинг.
+
+###Рефакторинг###
+
+###Ручки###
+
+Начнем ручки Creator...
 
