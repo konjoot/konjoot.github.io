@@ -520,7 +520,402 @@ gomega создаст файл, `reeky_test.go`
 
 ###Рефакторинг###
 
-###Ручки###
+Два момента в приложении требуют переработки:
 
-Начнем ручки Creator...
+* метод Setup нужно разделить на несколько методов
+* поле Ok превратить в метод и возвращать там общий статус приложения: роуты настроены, middleware подключено и т.д.
+* работу с матчерами стоит унифицировать
+
+Что касается метода Setup, то напрашивается разделение этого метода на две части и вынос этих частей в отдельные файлы. Сделаем это следующим образом:
+
+	 type beOkMatcher struct{}
+
+	 func (m *beOkMatcher) Match(actual interface{}) (success bool, err error) {
+	-       return (&matchers.BeTrueMatcher{}).Match(actual.(*App).Ok)
+	+       return (&matchers.BeTrueMatcher{}).Match(actual.(*App).Ok())
+	 }
+
+	+++ b/reeky/middleware.go
+	@@ -0,0 +1,9 @@
+	+package reeky
+	+
+	+import mw "github.com/labstack/echo/middleware"
+	+
+	+func (app *App) SetMiddleWare() bool {
+	+       app.Engine.Use(mw.Logger())
+	+       app.Engine.Use(mw.Recover())
+	+       return true
+	+}
+
+	 type App struct {
+	-       Ok     bool
+	-       Engine EngineIface
+	+       routes  bool
+	+       midware bool
+	+       Engine  EngineIface
+	 }
+
+	+
+	+func (app *App) Setup() {
+	+       app.midware = app.SetMiddleWare()
+	+       app.routes = app.SetRoutes()
+	+}
+	+
+	+func (app *App) Ok() bool {
+	+       return app.midware && app.routes
+	+}
+
+	-import mw "github.com/labstack/echo/middleware"
+	-
+	-func (app *App) Setup() (ok bool) {
+	-       // Middleware
+	-       app.Engine.Use(mw.Logger())
+	-       app.Engine.Use(mw.Recover())
+	-
+	-       // Routes
+	+func (app *App) SetRoutes() bool {
+	        app.Engine.Get("/boards/:id", Getter)
+	        app.Engine.Get("/boards", ListGetter)
+	        app.Engine.Put("/boards/:id", Updater)
+	        app.Engine.Post("/boards", Creator)
+	        app.Engine.Delete("/boards/:id", Destroyer)
+	-       app.Ok, ok = true, true
+	-       return
+	+       return true
+	 }
+
+	+++ b/reeky/routes_test.go
+	@@ -17,7 +17,7 @@ var _ = Describe("App", func() {
+	        BeforeEach(func() {
+	                engine = echo.New()
+	                app = &App{Engine: engine}
+	-               app.Setup()
+	+               app.SetRoutes()
+	        })
+
+Теперь протестируем какое middleware у нас подключено:
+
+	# reeky/middleware_test.go
+	package reeky_test
+
+	import (
+		. "github.com/konjoot/reeky/reeky"
+		mw "github.com/labstack/echo/middleware"
+
+		. "github.com/konjoot/reeky/matchers"
+		. "github.com/konjoot/reeky/mocks"
+		. "github.com/onsi/ginkgo"
+		. "github.com/onsi/gomega"
+	)
+
+	var _ = Describe("App", func() {
+		var (
+			app    *App
+			engine *EngineMock
+		)
+
+		BeforeEach(func() {
+			engine = &EngineMock{}
+			app = &App{Engine: engine}
+			app.SetMiddleWare()
+		})
+
+		It("should use expected middleware", func() {
+			Expect(engine).To(UseMiddleWare(mw.Logger()))
+			Expect(engine).To(UseMiddleWare(mw.Recover()))
+		})
+	})
+
+
+	# matchers/use_middleware.go
+	package matchers
+
+	import (
+		"github.com/labstack/echo"
+		"reflect"
+		"runtime"
+
+		. "github.com/konjoot/reeky/mocks"
+		"github.com/onsi/gomega/format"
+		"github.com/onsi/gomega/matchers"
+	)
+
+	func UseMiddleWare(midware echo.MiddlewareFunc) *useMiddleWareMatcher {
+		name := runtime.FuncForPC(reflect.ValueOf(midware).Pointer()).Name()
+		return &useMiddleWareMatcher{midware: name}
+	}
+
+	type useMiddleWareMatcher struct {
+		midware string
+	}
+
+	func (m *useMiddleWareMatcher) Match(actual interface{}) (success bool, err error) {
+		return (&matchers.ContainElementMatcher{Element: m.midware}).Match(actual.(*EngineMock).MiddleWares())
+	}
+
+	func (m *useMiddleWareMatcher) FailureMessage(actual interface{}) (message string) {
+		return format.Message(actual.(*EngineMock).MiddleWares(), "to have middleware", m.midware)
+	}
+
+	func (m *useMiddleWareMatcher) NegatedFailureMessage(actual interface{}) (message string) {
+		return format.Message(actual.(*EngineMock).MiddleWares(), "not to have middleware", m.midware)
+	}
+
+
+	# mocks/engine.go
+	package mocks
+
+	import (
+		"github.com/labstack/echo"
+		"reflect"
+		"runtime"
+	)
+
+	type EngineMock struct {
+		port     string
+		running  bool
+		midwares []string
+	}
+	...
+	func (e *EngineMock) Use(m ...echo.Middleware) {
+		for _, h := range m {
+			name := runtime.FuncForPC(reflect.ValueOf(h).Pointer()).Name()
+			e.midwares = append(e.midwares, name)
+		}
+	}
+
+	func (e *EngineMock) MiddleWares() []string {
+		return e.midwares
+	}
+
+Теперь нужно отрефакторить матчеры, их у нас уже четыре и в них дублируется один и тот же код, реализующий интерфейс gomega-матчера, в общем виде это можно представить так:
+
+	func Matcher(m ifaces.MatcherIface) *baseMatcher {
+		return &baseMatcher{m}
+	}
+
+	type baseMatcher struct{ ifaces.MatcherIface }
+
+	func (m *baseMatcher) Match(actual interface{}) (success bool, err error) {
+		return m.Matcher().Match(m.Prepare(actual))
+	}
+
+	func (m *baseMatcher) FailureMessage(actual interface{}) string {
+		return fmt.Sprintf(m.Template(false), m.Format(actual), m.Message())
+	}
+
+	func (m *baseMatcher) NegatedFailureMessage(actual interface{}) string {
+		return fmt.Sprintf(m.Template(true), m.Format(actual), m.Message())
+	}
+
+	func (m *baseMatcher) Template(negate bool) (s string) {
+		s = "Expected\n\t%s\n"
+
+		if negate {
+			s += "not "
+		}
+
+		s += "%s"
+
+		if str := m.String(); len(str) > 0 {
+			s += fmt.Sprintf("\n\t%s", str)
+		}
+
+		return
+	}
+
+Следовательно в каждом из наших кастомных матчеров достаточно будет реализовать интерфейс требуемый BaseMatcher-у для приведения их к требуемому виду:
+
+	type MatcherIface interface {
+		Matcher() types.GomegaMatcher
+		Prepare(actual interface{}) interface{}
+		Format(actual interface{}) string
+		Message() string
+		String() string
+	}
+
+Для этого реализуем следующий конструктор:
+
+	func Matcher(m MatcherIface) *baseMatcher {
+		return &baseMatcher{m}
+	}
+
+После этого наши матчеры можно переписать так:
+
+	# matchers/be_ok.go
+	package matchers
+
+	import (
+		. "github.com/konjoot/reeky/reeky"
+
+		"github.com/onsi/gomega/matchers"
+		"github.com/onsi/gomega/types"
+	)
+
+	func BeOk() *baseMatcher {
+		return Matcher(&beOkMatcher{})
+	}
+
+	type beOkMatcher struct{}
+
+	func (m *beOkMatcher) Matcher() types.GomegaMatcher {
+		return &matchers.BeTrueMatcher{}
+	}
+
+	func (m *beOkMatcher) Prepare(actual interface{}) interface{} {
+		return actual.(*App).Ok()
+	}
+
+	func (m *beOkMatcher) Format(actual interface{}) string {
+		return actual.(*App).String()
+	}
+
+	func (_ *beOkMatcher) Message() string {
+		return "to be Ok"
+	}
+
+	func (_ *beOkMatcher) String() (s string) {
+		return
+	}
+
+
+	# matchers/be_running.go
+	package matchers
+
+	import (
+		. "github.com/konjoot/reeky/mocks"
+		"github.com/onsi/gomega/matchers"
+		"github.com/onsi/gomega/types"
+	)
+
+	func BeRunning() *baseMatcher {
+		return Matcher(&beRunningMatcher{})
+	}
+
+	type beRunningMatcher struct{}
+
+	func (m *beRunningMatcher) Matcher() types.GomegaMatcher {
+		return &matchers.BeTrueMatcher{}
+	}
+
+	func (m *beRunningMatcher) Prepare(actual interface{}) interface{} {
+		return actual.(*EngineMock).IsRunning()
+	}
+
+	func (m *beRunningMatcher) Format(actual interface{}) string {
+		return actual.(*EngineMock).String()
+	}
+
+	func (_ *beRunningMatcher) Message() string {
+		return "to be running"
+	}
+
+	func (_ *beRunningMatcher) String() (s string) {
+		return
+	}
+
+
+	# matchers/handle.go
+	package matchers
+
+	import (
+		"fmt"
+		"github.com/labstack/echo"
+		"github.com/onsi/gomega/matchers"
+		"github.com/onsi/gomega/types"
+		"strings"
+	)
+
+	func Handle(method string) *handleMatcher {
+		return &handleMatcher{expected: echo.Route{Method: method}}
+	}
+
+	type handleMatcher struct {
+		expected echo.Route
+	}
+
+	func (m *handleMatcher) On(path string) *handleMatcher {
+		m.expected.Path = path
+		return m
+	}
+
+	func (m *handleMatcher) By(handler string) *baseMatcher {
+		m.expected.Handler = "github.com/konjoot/reeky/reeky." + handler
+		return Matcher(m)
+	}
+
+	func (m *handleMatcher) Matcher() types.GomegaMatcher {
+		return &matchers.ContainElementMatcher{Element: m.expected}
+	}
+
+	func (m *handleMatcher) Prepare(actual interface{}) interface{} {
+		return actual.(*echo.Echo).Routes()
+	}
+
+	func (_ *handleMatcher) Format(actual interface{}) string {
+		s := make([]string, 1)
+
+		for _, route := range actual.(*echo.Echo).Routes() {
+			s = append(s, fmt.Sprintf("%#v", route))
+		}
+
+		return "[  " + strings.Join(s, "\n\t   ") + "  ]"
+	}
+
+	func (_ *handleMatcher) Message() string {
+		return "to have route"
+	}
+
+	func (m *handleMatcher) String() (s string) {
+		return fmt.Sprintf("%#v", m.expected)
+	}
+
+
+	# matchers/use_middleware.go
+	package matchers
+
+	import (
+		"fmt"
+		"github.com/labstack/echo"
+		"reflect"
+		"runtime"
+		"strings"
+
+		. "github.com/konjoot/reeky/mocks"
+		"github.com/onsi/gomega/matchers"
+		"github.com/onsi/gomega/types"
+	)
+
+	func UseMiddleWare(midware echo.MiddlewareFunc) *baseMatcher {
+		name := runtime.FuncForPC(reflect.ValueOf(midware).Pointer()).Name()
+		return Matcher(&useMiddleWareMatcher{midware: name})
+	}
+
+	type useMiddleWareMatcher struct {
+		midware string
+	}
+
+	func (m *useMiddleWareMatcher) Matcher() types.GomegaMatcher {
+		return &matchers.ContainElementMatcher{Element: m.midware}
+	}
+
+	func (_ *useMiddleWareMatcher) Prepare(actual interface{}) interface{} {
+		return actual.(*EngineMock).MiddleWares()
+	}
+
+	func (_ *useMiddleWareMatcher) Format(actual interface{}) string {
+		return "[  " + strings.Join(actual.(*EngineMock).MiddleWares(), "\n\t   ") + "  ]"
+	}
+
+	func (_ *useMiddleWareMatcher) Message() string {
+		return "to have middleware"
+	}
+
+	func (m *useMiddleWareMatcher) String() (s string) {
+		return fmt.Sprintf("%#v", m.midware)
+	}
+
+
+###Creator###
+...
 
