@@ -15,28 +15,64 @@ categories: posts
   * негативный сценарий (попытка создать существующую запись):
     - биндим принятую форму на соотв. модель
     - не создаем запись в БД
-    - возвращаем 409 статус
+    - возвращаем 409 (Conflict)
     - возвращаем описание ошибки в теле ответа
-  * негативный сценарий (неверные параметры):
+  * негативный сценарий (неверные параметры, ошибка валидации):
     - биндим форму
     - не создаем запись в БД
-    - возвращаем статус 400
+    - возвращаем статус 422 (Unprocessable Entity)
+    - возвращаем описание ошибки в теле ответа
+  * негативный сценарий (неверные параметры, невозможно декодировать тело запроса):
+    - не биндим форму
+    - не создаем запись в БД
+    - возвращаем статус 415 (Unsupported Media Type)
+    - возвращаем описание ошибки в теле ответа
+  * негативный сценарий (не найдена соответствующая модель):
+    - не биндим форму
+    - не создаем запись в БД
+    - возвращаем статус 424 (Failed Dependency)
     - возвращаем описание ошибки в теле ответа
 
-Но прежде чем писать тесты нужно определиться с тем как будет организована внутренняя работа ручки, основной здесь вопрос что она будет использовать непосредственно для работы с БД и как будет биндить форму, пришедшую в запросе. Пока считаем, что у нас будет соотв. модель для каждого ресурса, которая будет добавляться в контекст в одной из middleware-функций. Обработка ошибок будет реализована отдельно, поэтому пункты относящиеся к этому функционалу будут реализованы и протестированы в соотв. middleware-обработчике. Т.е. обязанность ручки по обработке ошибок будет сводиться лишь к их сбору и добавлению в контекст. А дальше эти ошибки будет обрабатывать соответстующее middleware. В этом плане появляется еще один кейс для ручки в случае получения контекста, который уже содержит ошибки она ничего не должна делать, т.к. что-то уже пошло не так и пусть с этим соотв. обработчик разбирается. Однако, стоит помнить, что обработчик ошибок будет иметь дело не с паникой, а с ошибками в контексте, для случая если где-то в приложении появится паника, нами уже добавлен Recover обработчик в middleware из инструментария echo, который будет как раз ответственен за 500-e ошибки, если таковые возникнут.
+Но прежде чем писать тесты нужно определиться с тем как будет организована внутренняя работа ручки, основные вопросы здесь в том, что она будет использовать непосредственно для работы с БД и как будет биндить форму, пришедшую в запросе, а так же как будет осуществляться обработка ошибок. Пока остановимся на следующем варианте работы:
 
-В echo работа middleware организована таким образом, что обработчики живущие в нем могут подменять обработчик на, допустим, соотв. обработчик ошибок, это значит, что в middware-обработчике, который будет биндить ресурс к контексту в случае неудачи можно вернуть соотв. обработчик, который отобъет ошибку и до реального хендлера поток управления вообще не дойдет, это очень круто, поэтому мы не будем парится по поводу кейса, когда обработчик имеет дело с ошибочным контекстом.
+* парсим переданные параметры
+* биндим их в модель
+* сохраняем модель (валидация формы будет производиться на стороне модели)
+* возвращаем статус 201
+* и соотв. Location-хэдер
+* на каждом этапе проверяем наличие ошибки
+* при появлении оной прерываем выполнение и возвращаем ее
 
-Теперь, что касается добавления ошибок в контекст, здесь ситуация немного иная, ошибки не копятся в контексте, а наоборот, при вызове функции c.Error(e) вызывается соотв. обработчик ошибок. Поэтому задача ручки будет как раз заключаться в вызове метода Error с ошибкой, если таковая придет из модели. Осталось придумать, как это будет протестировано. Ой, даже еще круче, обработчик просто последовательно делает следующее:
+В echo есть middleware-обработчик Logger(), который получив ошибку типа HTTPError применяет к ней стандартный обработчик ошибок, а в противном случае 500-ю ошибку. Поэтому на это можно не заморачиваться, а нам останется написать только middleware-конвертор ошибок, который будет конвертировать ошибки, приходящие их хэндлеров, в HTTPErrors. Благодаря этому у нас будет унифицирована конвертация\обработка ошибок. Что касается неперехваченных паник, то за это отвечает echo-кий Recover().
 
-* получает ресурс из контекста
-* биндит на него форму
-* сохраняет ресурс
+Т.е. код Creator-a будет примерно такой:
 
-Если в процессе этих действий возникает ошибка она просто кидается в c.Error() где обрабатывается соотв. обработчиком.
-Поэтому тестировать нужно то, что обработчик вызывает c.Error() с разными ошибками. А чтобы это сделать нам нужно мокнуть контекст. А для этого нужно в обработчик принимать интерфейс. А эту возмжность нужно в свою очередь проверить. С другой стороны если так не получится, тогда нужно посмотреть, что происходить в методе Error и попробовать разрулить это средствами echo.
+    func Creator(c *echo.Context) (e error) {
 
-Хэндлеру интерфейс не скормить, поэтому наличие ошибок будем проверять следующим образом: зарегистрируем тестовый обработчик исключений, в котором и будем проверять, что ошибки прилетели и какие.
+      resource := c.Get("resource")
+
+      if resource == nil {
+        return NewEmptyResourseError()
+      }
+
+      if e = c.Bind(resource); e != nil {
+        return
+      }
+
+      if e = resource.Save(); e != nil {
+        return
+      }
+
+      if e = SetHeader(c, Location(resource)); e != nil {
+        return
+      }
+
+      if e = c.JSON(http.StatusCreated); e != nil {
+        return
+      }
+
+      return
+    }
 
 Теперь у нас есть все чтобы написать необходимые тесты:
 
@@ -45,6 +81,7 @@ categories: posts
 
     import (
       . "github.com/konjoot/reeky/reeky"
+      "github.com/labstack/echo"
 
       . "github.com/konjoot/reeky/matchers"
       . "github.com/konjoot/reeky/mocks"
@@ -57,6 +94,7 @@ categories: posts
 
     var _ = Describe("Handlers", func() {
       var (
+        err      error
         form     map[string]string
         context  *echo.Context
         entity   *ResourceMock
@@ -72,7 +110,7 @@ categories: posts
         JustBeforeEach(func() {
           request := http.NewRequest("POST", "/tests", test.NewJsonReader(form))
           context := test.Context(request, response, entity)
-          Creator(context)
+          err := Creator(context)
         })
 
         Describe("positive case", func() {
@@ -81,36 +119,52 @@ categories: posts
           })
 
           It("should create entity and return right response", func() {
+            Expect(err).To(BeNil())
             Expect(form).To(BeBindedTo(entity))
             Expect(entity).To(BeCreated())
             Expect(response).To(HaveStatus("201"))
             Expect(response).To(HaveHeader("Location").WithUrlFor(entity))
             Expect(response).To(HaveEmptyBody())
-            Expect(context).NotTo(HaveErrors())
           })
         })
 
-        Describe("negative case (conflict)", func() {
+        Describe("negative case (Conflict)", func() {
           BeforeEach(func() {
             entity = &ResourseMock{Conflict: true}
           })
 
           It("should not create entity and set errors to context", func() {
+            Expect(err).To(HaveType(ConflictError))
             Expect(form).To(BeBindedTo(entity))
             Expect(entity).NotTo(BeCreated())
             Expect(response).NotTo(HaveStatus("201"))
             Expect(response).NotTo(HaveHeader("Location"))
             Expect(response).To(HaveEmptyBody())
-            Expect(context).To(HaveErrors())
           })
         })
 
-        Describe("negative case (invalid params)", func() {
+        Describe("negative case (Unprocessable Entity)", func() {
           BeforeEach(func() {
             entity = &ResourseMock{Invalid: true}
           })
 
           It("should not create entity and set errors to context", func() {
+            Expect(err).To(HaveType(ValidationError))
+            Expect(form).To(BeBindedTo(entity))
+            Expect(entity).NotTo(BeCreated())
+            Expect(response).NotTo(HaveStatus("201"))
+            Expect(response).NotTo(HaveHeader("Location"))
+            Expect(response).To(HaveEmptyBody())
+          })
+        })
+
+        Describe("negative case (Unsupported Media Type)", func() {
+          BeforeEach(func() {
+            entity = &ResourseMock{}
+          })
+
+          It("should not create entity and set errors to context", func() {
+            Expect(err).To(HaveType(echo.UnsupportedMediaType))
             Expect(form).NotTo(BeBindedTo(entity))
             Expect(entity).NotTo(BeCreated())
             Expect(response).NotTo(HaveStatus("201"))
@@ -120,17 +174,18 @@ categories: posts
           })
         })
 
-        Describe("negative case (no resorce binded)", func() {
+        Describe("negative case (Failed Dependency)", func() {
           It("should not create entity and set errors to context", func() {
+            Expect(err).To(HaveType(EmptyResourceError))
             Expect(entity).To(BeNil())
             Expect(response).NotTo(HaveStatus("201"))
             Expect(response).NotTo(HaveHeader("Location"))
             Expect(response).To(HaveEmptyBody())
-            Expect(context).To(HaveErrors())
           })
         })
       })
     })
+
 
 Как видно из кода выше, у нас появляется новый пакет test, где будут храниться различные хелперы для тестового окружения, а так же матчеры и моки, которые перенесем туда в одном из следующих рефакторингов, чтобы сделать структуру проекта более прозрачной.
 
@@ -149,7 +204,7 @@ categories: posts
   - HaveStatus(...)
   - HaveHeader(...).WithUrlFor(...)
   - HaveEmptyBody()
-  - HaveErrors()
+  - HaveType(...)
 
 Начнем с пакета test:
 
@@ -180,3 +235,80 @@ categories: posts
     }
 
 Теперь займемся матчерами, моку ресурса оставим напоследок, т.к. в процессе написания матчеров будет спроектирован ожидаемый от моки интерфейс.
+Итак, начнем с BeBindedTo(...)
+
+    // matchers/be_binded_to.go
+    package matchers
+
+    import (
+      . "github.com/konjoot/reeky/mocks"
+      . "github.com/konjoot/reeky/mocks/interfaces"
+
+      "github.com/onsi/gomega/matchers"
+      "github.com/onsi/gomega/types"
+    )
+
+    func BeBindedTo() *beBindedToMatcher {
+      return Matcher(&beBindedToMatcher{})
+    }
+
+    type beBindedToMatcher struct{}
+
+    func (m *beBindedToMatcher) Matcher() types.GomegaMatcher {
+      return &matchers.BeTrueMatcher{}
+    }
+
+    func (m *beBindedToMatcher) Prepare(actual interface{}) interface{} {
+      return actual.(Bindable).Binded()
+    }
+
+    func (m *beBindedToMatcher) Format(actual interface{}) string {
+      return actual.(Stringer).String()
+    }
+
+    func (_ *beBindedToMatcher) Message() string {
+      return "to be binded"
+    }
+
+    func (_ *beBindedToMatcher) String() (s string) {
+      return
+    }
+
+Этот матчер отличается от всех предыдущих тем, что в методах Prepare и Format параметр actual явно приводится к интерфейсу, а не к конкретному типу, как в прошлых примерах, это сделано, чтобы можно было один и тот же матчер применять к любым типам реализующим ожидаемый интерфейс. Так же у нас в пакете matchers появится новый пакет interfaces, где будут лежать все интерфейсы, используемые в тестовом окружении, чтобы не мешать их с интерфейсами, используемыми в самом приложении. Все последующие\существующие матчеры будут реализованы\отрефакторены по аналогии с вышеприведенным примером.
+
+Итак, матчеры реализованы, теперь необходимо сделать следующее:
+
+* создать пакет matchers/interfaces, где опишем необходимые интерфейсы:
+  - Bindable
+  - Stringer
+  - ...
+* реализовать моку ResourceMock:
+  - с полями:
+    + Invalid bool
+    + Conflict bool
+  - и методами:
+    + ...
+
+
+# ToDo
+В нужно отрефакторить все матчеры таким образом, чтобы они принимали интерфейсы, для полиморфизма и т.п. поэтому в новых матчерах начнем уже это реализовывать, но сначала нужно обедиться, что схема рабочая, т.е. нужно проверить, что код:
+
+    func Test(i interface{}){
+      TestMe(i.(runner))
+    }
+
+    func TestMe(r runner) {
+      r.Run()
+    }
+
+    type runner interface {
+      Run()
+    }
+
+    type RR struct {}
+
+    func (_ *RR) Run() {
+      fmt.Println("Running")
+    }
+
+Будет работать. Да код работает!
