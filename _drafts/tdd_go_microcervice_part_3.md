@@ -122,9 +122,9 @@ categories: posts
             Expect(err).To(BeNil())
             Expect(form).To(BeBindedTo(entity))
             Expect(entity).To(BeCreated())
-            Expect(response).To(HaveStatus("201"))
-            Expect(response).To(HaveHeader("Location").WithUrlFor(entity))
-            Expect(response).To(HaveEmptyBody())
+            Expect(response.Code).To(Equal(201))
+            Expect(response.Header().Get("Location")).To(Equal(entity.Url()))
+            Expect(response.Body).To(BeEmpty())
           })
         })
 
@@ -134,12 +134,12 @@ categories: posts
           })
 
           It("should not create entity and set errors to context", func() {
-            Expect(err).To(HaveType(ConflictError))
+            Expect(err).To(BeAssignableToTypeOf(ConflictError))
             Expect(form).To(BeBindedTo(entity))
             Expect(entity).NotTo(BeCreated())
-            Expect(response).NotTo(HaveStatus("201"))
-            Expect(response).NotTo(HaveHeader("Location"))
-            Expect(response).To(HaveEmptyBody())
+            Expect(response.Code).NotTo(Equal(201))
+            Expect(response.Header().Get("Location")).To(BeNil())
+            Expect(response.Body).To(BeEmpty())
           })
         })
 
@@ -149,12 +149,12 @@ categories: posts
           })
 
           It("should not create entity and set errors to context", func() {
-            Expect(err).To(HaveType(ValidationError))
+            Expect(err).To(BeAssignableToTypeOf(ValidationError))
             Expect(form).To(BeBindedTo(entity))
             Expect(entity).NotTo(BeCreated())
-            Expect(response).NotTo(HaveStatus("201"))
-            Expect(response).NotTo(HaveHeader("Location"))
-            Expect(response).To(HaveEmptyBody())
+            Expect(response.Code).NotTo(Equal(201))
+            Expect(response.Header().Get("Location")).To(BeNil())
+            Expect(response.Body).To(BeEmpty())
           })
         })
 
@@ -164,23 +164,22 @@ categories: posts
           })
 
           It("should not create entity and set errors to context", func() {
-            Expect(err).To(HaveType(echo.UnsupportedMediaType))
+            Expect(err).To(BeAssignableToTypeOf(echo.UnsupportedMediaType))
             Expect(form).NotTo(BeBindedTo(entity))
             Expect(entity).NotTo(BeCreated())
-            Expect(response).NotTo(HaveStatus("201"))
-            Expect(response).NotTo(HaveHeader("Location"))
-            Expect(response).To(HaveEmptyBody())
-            Expect(context).To(HaveErrors())
+            Expect(response.Code).NotTo(Equal(201))
+            Expect(response.Header().Get("Location")).To(BeNil())
+            Expect(response.Body).To(BeEmpty())
           })
         })
 
         Describe("negative case (Failed Dependency)", func() {
           It("should not create entity and set errors to context", func() {
-            Expect(err).To(HaveType(EmptyResourceError))
+            Expect(err).To(BeAssignableToTypeOf(EmptyResourceError))
             Expect(entity).To(BeNil())
-            Expect(response).NotTo(HaveStatus("201"))
-            Expect(response).NotTo(HaveHeader("Location"))
-            Expect(response).To(HaveEmptyBody())
+            Expect(response.Code).NotTo(Equal(201))
+            Expect(response.Header().Get("Location")).To(BeNil())
+            Expect(response.Body).To(BeEmpty())
           })
         })
       })
@@ -201,10 +200,6 @@ categories: posts
 * матчеры:
   - BeBindedTo(...)
   - BeCreated()
-  - HaveStatus(...)
-  - HaveHeader(...).WithUrlFor(...)
-  - HaveEmptyBody()
-  - HaveType(...)
 
 Начнем с пакета test:
 
@@ -234,54 +229,91 @@ categories: posts
       return bytes.NewReader(jsForm)
     }
 
-Теперь займемся матчерами, моку ресурса оставим напоследок, т.к. в процессе написания матчеров будет спроектирован ожидаемый от моки интерфейс.
-Итак, начнем с BeBindedTo(...)
+Теперь займемся матчерами:
 
     // matchers/be_binded_to.go
     package matchers
 
     import (
-      . "github.com/konjoot/reeky/mocks"
-      . "github.com/konjoot/reeky/mocks/interfaces"
+      . "github.com/konjoot/reeky/test/interfaces"
 
+      "fmt"
       "github.com/onsi/gomega/matchers"
       "github.com/onsi/gomega/types"
     )
 
-    func BeBindedTo() *beBindedToMatcher {
-      return Matcher(&beBindedToMatcher{})
+    func BeBindedTo(model BindableStringer) *baseMatcher {
+      return Matcher(&beBindedToMatcher{model: model})
     }
 
-    type beBindedToMatcher struct{}
+    type beBindedToMatcher struct {
+      model BindableStringer
+    }
 
-    func (m *beBindedToMatcher) Matcher() types.GomegaMatcher {
+    func (_ *beBindedToMatcher) Matcher() types.GomegaMatcher {
       return &matchers.BeTrueMatcher{}
     }
 
     func (m *beBindedToMatcher) Prepare(actual interface{}) interface{} {
-      return actual.(Bindable).Binded()
+      return m.model.BindedWith(actual)
     }
 
-    func (m *beBindedToMatcher) Format(actual interface{}) string {
-      return actual.(Stringer).String()
+    func (_ *beBindedToMatcher) Format(actual interface{}) string {
+      return fmt.Sprintf("%v", actual)
     }
 
     func (_ *beBindedToMatcher) Message() string {
-      return "to be binded"
+      return "to be binded to"
     }
 
-    func (_ *beBindedToMatcher) String() (s string) {
+    func (m *beBindedToMatcher) String() string {
+      return fmt.Sprintf("%v", m.model)
+    }
+
+
+    // matchers/be_created.go
+    package matchers
+
+    import (
+      . "github.com/konjoot/reeky/test/interfaces"
+
+      "fmt"
+      "github.com/onsi/gomega/matchers"
+      "github.com/onsi/gomega/types"
+    )
+
+    func BeCreated() *baseMatcher {
+      return Matcher(&beCreatedMatcher{})
+    }
+
+    type beCreatedMatcher struct{}
+
+    func (m *beCreatedMatcher) Matcher() types.GomegaMatcher {
+      return &matchers.BeTrueMatcher{}
+    }
+
+    func (m *beCreatedMatcher) Prepare(actual interface{}) interface{} {
+      return actual.(Creatable).Created()
+    }
+
+    func (m *beCreatedMatcher) Format(actual interface{}) string {
+      return fmt.Sprintf("%v", actual)
+    }
+
+    func (_ *beCreatedMatcher) Message() string {
+      return "to be created"
+    }
+
+    func (_ *beCreatedMatcher) String() (s string) {
       return
     }
 
-Этот матчер отличается от всех предыдущих тем, что в методах Prepare и Format параметр actual явно приводится к интерфейсу, а не к конкретному типу, как в прошлых примерах, это сделано, чтобы можно было один и тот же матчер применять к любым типам реализующим ожидаемый интерфейс. Так же у нас в пакете matchers появится новый пакет interfaces, где будут лежать все интерфейсы, используемые в тестовом окружении, чтобы не мешать их с интерфейсами, используемыми в самом приложении. Все последующие\существующие матчеры будут реализованы\отрефакторены по аналогии с вышеприведенным примером.
 
+Как видим новые матчеры немного отличаются от своих предыдущих собратьев. Отличие в том, что вместо приведения к конкретному типу используются интерфейсы. В случае BeBindedTo-матчера интерфейс BindableStringer принимается в конструктор, а в случае BeCreated-матчера в методе Prepare осуществляется приведение к интерфейсу Creatable. Это сделано, чтобы можно было один и тот же матчер применять к любым типам реализующим ожидаемый интерфейс. Так же у нас в пакете test появился новый пакет interfaces, где будут лежать все интерфейсы, используемые в тестовом окружении, чтобы не мешать их с интерфейсами, используемыми в самом приложении. Все последующие\существующие матчеры будут реализованы\отрефакторены по аналогии с вышеприведенным примером.
+
+# ToDo
 Итак, матчеры реализованы, теперь необходимо сделать следующее:
 
-* создать пакет matchers/interfaces, где опишем необходимые интерфейсы:
-  - Bindable
-  - Stringer
-  - ...
 * реализовать моку ResourceMock:
   - с полями:
     + Invalid bool
@@ -290,25 +322,4 @@ categories: posts
     + ...
 
 
-# ToDo
-В нужно отрефакторить все матчеры таким образом, чтобы они принимали интерфейсы, для полиморфизма и т.п. поэтому в новых матчерах начнем уже это реализовывать, но сначала нужно обедиться, что схема рабочая, т.е. нужно проверить, что код:
 
-    func Test(i interface{}){
-      TestMe(i.(runner))
-    }
-
-    func TestMe(r runner) {
-      r.Run()
-    }
-
-    type runner interface {
-      Run()
-    }
-
-    type RR struct {}
-
-    func (_ *RR) Run() {
-      fmt.Println("Running")
-    }
-
-Будет работать. Да код работает!
