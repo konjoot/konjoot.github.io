@@ -425,3 +425,72 @@ categories: posts
 
 # Реализация
 
+    // handlers/creator.go
+    package handlers
+
+    import (
+      "net/http"
+
+      "github.com/labstack/echo"
+
+      i "github.com/konjoot/reeky/interfaces"
+    )
+
+    func Creator(c *echo.Context) (e error) {
+      var r i.ResourceIface
+
+      if r, e = Resource(c); e != nil {
+        return
+      }
+
+      if e = c.Bind(r.Form()); e != nil {
+        return
+      }
+
+      if e = r.Save(); e != nil {
+        return
+      }
+
+      c.Response().Header().Set("Location", r.Url())
+
+      if e = c.NoContent(http.StatusCreated); e != nil {
+        return
+      }
+
+      return
+    }
+
+
+
+# Draft
+Нужно подумать, что делать с интефейсами для ручек, с одной стороны можно написать в helpers.go множество функций, которые будут возвращать нужный интерфейс, с другой стороны можно граничиться одним геттером ресурса Resource и тайп-кастинг проводить уже непосредственно в самой ручке, что наверное оправданно.
+
+Второй момент как будем хранить интерфейсы, пока не вижу причин разносить их на две папки простые и составные, оставляем все как есть.
+
+Теперь что касается дальнейшей работы видимо лучший вариант, по горячим следам написать тесты для всех остальных ручек, заодно определимся с ошибками, которые будут возвращаться из хэндлеров и тем как будет выглядеть наш ресурс.
+
+Что мы имеем на данный момент:
+* ошибки возвращаемые моделью:
+  - ValidationError - ошибка валидации - 422 (Unprocessable Entity)
+  - ConflictError - ошибка сохранение - такая запись уже существует - 409 (Conflict)
+* ошибки возвращаемые ручкой:
+  - json.SyntaxError - если тело запроса не является валидным json-ном - 400 (Bad Request)
+  - errors.New("echo ⇒ unsupported media type") - если приложение не поддерживает указанный в запросе Content-Type - 415 (Unsupported Media Type)
+  - EmptyResourceError - если ресурс для ручки не найден - 424 (Failed Dependency)
+
+Чтобы названия ручек не путать с интерфейсами их нужно переименовать, Creator -> CreateHandler -> Create; Destroyer -> DestroyHandler -> Destroy
+
+
+приведение ресурса к нужному интерфейсу оставил в ручках, так проще, иначе получаем засилие однотипных методово в helpers.go, кстати helpers.go пока удален за ненадобностью.
+
+Итак, на текущий момент у нас есть ручка Create и тесты к ней, сегодня пишем ручку Get, там поведение такое:
+
+* получаем реквест
+* ищем запись в БД
+* если запись найдена:
+  - отдаем json c аттрибутами
+  - в json-e должны присутствовать линки на просмотр списка\редактирование\удаление (наверное это лучше сделать в отдельном middleware, в любом случае, пока с этим можно погодить)
+  - статус 200
+* errors.New("echo ⇒ unsupported media type") - если приложение не поддерживает указанный в запросе Content-Type - 415 (Unsupported Media Type)
+* EmptyResourceError - если ресурс для ручки не найден - 424 (Failed Dependency)
+* NotFoundError - 404(NotFound) если искомая запись не найдена
