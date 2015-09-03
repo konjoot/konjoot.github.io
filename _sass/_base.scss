@@ -147,7 +147,15 @@ blockquote {
 //     }
 // }
 
+/**
+* toggable code
+*/
 
+pre.toggable {
+    height: 1em !important;
+    padding: 3px !important;
+    overflow: hidden !important;
+}
 
 /**
  * Wrapper
