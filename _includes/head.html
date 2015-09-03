@@ -8,8 +8,14 @@
 
     <link rel="stylesheet" href="{{ "/css/main.css" | prepend: site.baseurl }}">
     <link rel="canonical" href="{{ page.url | replace:'index.html','' | prepend: site.baseurl | prepend: site.url }}">
-    <link href='http://fonts.googleapis.com/css?family=Ubuntu+Mono&subset=cyrillic,latin' rel='stylesheet' type='text/css'>
-    <link rel="stylesheet" href="{{ "/highlight/styles/dark.css" | prepend: site.baseurl }}">
-    <script src="{{ "/highlight/highlight.pack.js" | prepend: site.baseurl }}"></script>
-    <script>hljs.initHighlightingOnLoad();</script>
+    <link rel="stylesheet" href="//cdn.jsdelivr.net/font-hack/2.010/css/hack-extended.min.css">
+    <!-- <link href='https://fonts.googleapis.com/css?family=Andika&subset=latin,cyrillic-ext' rel='stylesheet' type='text/css'> -->
+    <!-- <link href='https://fonts.googleapis.com/css?family=Play&subset=latin,cyrillic-ext' rel='stylesheet' type='text/css'> -->
+    <!-- <link href='http://fonts.googleapis.com/css?family=Ubuntu&subset=cyrillic,latin' rel='stylesheet' type='text/css'> -->
+    <link href='https://fonts.googleapis.com/css?family=Ubuntu:400,300,500,700&subset=latin,cyrillic-ext' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" href="{{ "/highlight/nstyles/prism.css" | prepend: site.baseurl }}">
+    <!-- <link rel="stylesheet" href="{{ "/highlight/styles/dark.css" | prepend: site.baseurl }}"> -->
+    <script src="{{ "/highlight/prism.js" | prepend: site.baseurl }}"></script>
+    <!-- // <script src="{{ "/highlight/highlight.pack.js" | prepend: site.baseurl }}"></script> -->
+    <!-- <script>hljs.initHighlightingOnLoad();</script> -->
 </head>

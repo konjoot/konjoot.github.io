@@ -6,8 +6,9 @@
 
 
 // Our variables
-$base-font-family:   "Ubuntu Mono","menlo",monospace;
-$base-font-size:     16px;
+// $base-font-family:   "Andika","menlo",monospace;
+$base-font-family:   "Ubuntu","menlo",monospace;
+$base-font-size:     18px;
 $medium-font-size:   $base-font-size * 1.115;
 $large-font-size:    $base-font-size * 1.125;
 $xxl-font-size:      $large-font-size * 1.25;
@@ -16,9 +17,11 @@ $base-line-height:   1.5;
 
 $spacing-unit:       30px;
 
-$text-color:         #111;
+$text-color:         #233;
+// $text-color:         #111;
+
 $background-color:   #fff;
-$brand-color:        rgb(221, 72, 20);
+$brand-color:        black;
 
 $brand-color-light:  lighten($brand-color, 10%);
 
