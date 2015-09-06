@@ -1,0 +1,35 @@
+pre.toggable {
+  &::after{
+    content: #{attr(placeholder)} " ▲";
+    color: black;
+    background-color: #CFCFCF;
+    display: inline-block;
+    cursor: pointer;
+    position: absolute;
+    bottom: auto;
+    left: auto;
+    bottom: 0;
+    left: 0;
+    width: auto;
+    height: auto;
+    font-size: 14px !important;
+    border-radius: 0 5px 0 0;
+    padding: 0 0.5em;
+    text-shadow: none;
+    z-index: 1000;
+    -webkit-box-shadow: none;
+    -moz-box-shadow: none;
+    box-shadow: none;
+    -webkit-transform: none;
+    -moz-transform: none;
+    -ms-transform: none;
+    -o-transform: none;
+    transform: none;
+  }
+
+  &.twisted::after {
+    content: #{attr(placeholder)} " ▼";
+    border-radius: 0 0 5px 0;
+  }
+}
+

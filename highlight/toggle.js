@@ -1,13 +1,22 @@
+'use strict'
+
 window.onload = function() {
   var toggableElems = document.getElementsByClassName("toggable");
-  for (i = 0; i < toggableElems.length; i++){
+  for (var i = 0; i < toggableElems.length; i++){
     var elem = toggableElems[i];
     elem.onclick = toggle;
   }
-  console.log(elems);
 };
 
 function toggle() {
-  var classString = this.className;
-  // pending
+  var classes = this.className.split(" ");
+  console.log(classes);
+  var indexOfTwisted = classes.indexOf("twisted")
+  if (indexOfTwisted > -1){
+    classes.splice(indexOfTwisted, 1);
+    this.className = classes.join(" ");
+  }else{
+    classes.push("twisted");
+    this.className = classes.join(" ");
+  }
 };

@@ -10,6 +10,7 @@ pre[class*="language-"] {
 	color: black;
 	text-shadow: 0 1px white;
 	font-family: Hack, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
+	font-size: 14px !important;
 	direction: ltr;
 	text-align: left;
 	white-space: pre;
@@ -49,7 +50,7 @@ code[class*="language-"]::selection, code[class*="language-"] ::selection {
 
 /* Code blocks */
 pre[class*="language-"] {
-	padding: 1em;
+	padding: 0 0 1.5em;
 	margin: .5em 0;
 	overflow: auto;
 }
@@ -247,6 +248,7 @@ pre.line-numbers > code {
 pre[class*='language-'] {
 	position: relative;
 }
+
 pre[class*='language-'][data-language]::before {
 	content: attr(data-language);
 	color: black;
@@ -259,7 +261,6 @@ pre[class*='language-'][data-language]::before {
 	right: 0;
 	width: auto;
 	height: auto;
-	font-size: 14px !important;
 	border-radius: 0 0 0 5px;
 	padding: 0 0.5em;
 	text-shadow: none;
