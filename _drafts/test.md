@@ -7,7 +7,7 @@ categories: posts
 
 Итак мы имеем кучу всего интересного. При этом безусловно мы учитываем различныем моменты, которые раньше не учитывали, и как видно из кода ниже лучше делать все по манам, хотя немного эвристического мышления не помешает.
 
-<pre class="language-go line-numbers toggable" placeholder="handlers/create.go"><code>
+<pre class="language-go line-numbers toggable twisted" placeholder="handlers/create.go"><code>
 
 func Creator(c *echo.Context) (e error) {
 
