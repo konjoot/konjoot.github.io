@@ -37,3 +37,35 @@ func Creator(c *echo.Context) (e error) {
 }
 
 </code></pre>
+
+
+<pre class="language-go line-numbers toggable twisted" placeholder="something else"><code>
+
+func Creator(c *echo.Context) (e error) {
+
+ resource := c.Get("resource")
+
+  if resource == nil {
+    return NewEmptyResourseError()
+  }
+
+  if e = c.Bind(resource.Form()); e != nil {
+    return
+  }
+
+  if e = resource.Save(); e != nil {
+    return
+  }
+
+  if e = SetHeader(c, Location(resource)); e != nil {
+    return
+  }
+
+  if e = c.JSON(http.StatusCreated); e != nil {
+    return
+  }
+
+  return
+}
+
+</code></pre>

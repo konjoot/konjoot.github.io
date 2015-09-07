@@ -1,5 +1,5 @@
 pre.toggable {
-  &::after{
+  .twister::after{
     content: #{attr(placeholder)} " ▲";
     color: black;
     background-color: #CFCFCF;
@@ -27,9 +27,8 @@ pre.toggable {
     transform: none;
   }
 
-  &.twisted::after {
+  &.twisted > .twister::after {
     content: #{attr(placeholder)} " ▼";
     border-radius: 0 0 5px 0;
   }
 }
-
