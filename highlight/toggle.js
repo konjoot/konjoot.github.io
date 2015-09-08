@@ -10,32 +10,39 @@
         new Button(el)
           .addClass("twister")
           .traverse("placeholder")
-          .onClick(toggle);
+          .on('click', toggle);
     });
   }
 
   function Button(el){
-    var self = this;
+    this.parent = el || document.getElementsByTagName("body")[0];
+    this.node = document.createElement("div");
+    this.parent.appendChild(this.node);
 
-    self.parent = isExists(el) ? el : document.getElementsByTagName("body")[0];
-    self.node = document.createElement("div");
-    self.node = self.parent.appendChild(self.node);
-
-    return self;
+    return this;
   }
 
   Button.prototype.traverse = function(attrName) {
     this.node.setAttribute(attrName, this.parent.getAttribute(attrName));
+
     return this;
   };
 
-  Button.prototype.onClick = function(callback) {
-    this.node.onclick = callback;
+  Button.prototype.on = function(type, callback) {
+    if (this.node.addEventListener) {
+      this.node.addEventListener(type, callback, false);
+    } else if (this.node.attachEvent) { //IE
+      this.node.attachEvent('on' + type, callback);
+    }
+
     return this;
   };
 
   Button.prototype.addClass = function(name){
-    this.node.className += " " + name;
+    if (this.node.className.indexOf(name) === -1) {
+        this.node.className += " " + name;
+    }
+
     return this;
   };
 
@@ -48,9 +55,5 @@
     }else{
       parent.className += " " + c;
     }
-  }
-
-  function isExists(el){
-    return typeof el !== "undefined" && el !== null
   }
 }());
