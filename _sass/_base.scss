@@ -120,37 +120,6 @@ blockquote {
 /**
  * Code formatting
  */
-// pre,
-// code {
-//     font-size: $base-font-size;
-//     font-family: $base-font-family;
-//     border: 1px solid $grey-color-dark;
-//     border-radius: 3px;
-//     background-color: $pcode-back-color;
-// }
-
-// code {
-//     background-color: $code-back-color;
-//     border-color: $grey-color-dark;
-//     color: $code-color;
-//     padding: 1px 5px;
-// }
-
-// pre {
-//     padding: 8px 12px;
-//     overflow-x: auto;
-
-//     > code {
-//         border: 0;
-//         padding-right: 0;
-//         padding-left: 0;
-//     }
-// }
-
-/**
-* toggable code
-*/
-
 pre.twisted {
     height: 1.3em !important;
     padding: 2px !important;

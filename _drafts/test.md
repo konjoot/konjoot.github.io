@@ -39,7 +39,6 @@ func Creator(c *echo.Context) (e error) {
 
 
 <pre class="language-go line-numbers toggable twisted" placeholder="something else"><code>
-
 func Creator(c *echo.Context) (e error) {
 
  resource := c.Get("resource")
